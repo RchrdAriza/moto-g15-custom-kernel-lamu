@@ -38,15 +38,15 @@ El hash `98e7be363` identifica de forma única la config de este build (se puede
 
 Kernel custom visible en Configuración del dispositivo:
 
-![Configuración del sistema con el kernel custom](Screenshot_20260731-123844_Configuración.png)
+<img src="Screenshot_20260731-123844_Configuración.png" alt="Configuración del sistema con el kernel custom" width="340">
 
 Requisitos de DroidSpaces verificados, todos en verde:
 
-![Requisitos de DroidSpaces todos en verde](Screenshot_20260815-004328_Droidspaces.png)
+<img src="Screenshot_20260815-004328_Droidspaces.png" alt="Requisitos de DroidSpaces todos en verde" width="340">
 
 Contenedores de Droidspaces corriendo:
 
-![Contenedores de Droidspaces corriendo](Screenshot_20260815-004850_Droidspaces.png)
+<img src="Screenshot_20260815-004850_Droidspaces.png" alt="Contenedores de Droidspaces corriendo" width="340">
 
 ## Instalación
 
