@@ -34,6 +34,20 @@ Linux version 6.6.127-android15-8-g98e7be363fe2-dirty-4k
 
 El hash `98e7be363` identifica de forma única la config de este build (se puede verificar después de flashear vía `uname`/pstore).
 
+## Capturas
+
+Kernel custom visible en Configuración del dispositivo:
+
+![Configuración del sistema con el kernel custom](Screenshot_20260731-123844_Configuración.png)
+
+Requisitos de DroidSpaces verificados, todos en verde:
+
+![Requisitos de DroidSpaces todos en verde](Screenshot_20260815-004328_Droidspaces.png)
+
+Contenedores de Droidspaces corriendo:
+
+![Contenedores de Droidspaces corriendo](Screenshot_20260815-004850_Droidspaces.png)
+
 ## Instalación
 
 ### Requisitos
