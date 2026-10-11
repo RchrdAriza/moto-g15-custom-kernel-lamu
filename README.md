@@ -88,6 +88,38 @@ fastboot reboot
 
 El paso a paso completo está documentado en [`kernel_droidspaces_lamu_clear.ipynb`](kernel_droidspaces_lamu_clear.ipynb).
 
+## Problema conocido: el touch no responde al encender la pantalla (pantallas de repuesto)
+
+**Síntoma:** después de encender la pantalla, a veces el touch no responde en absoluto. Nunca deja de funcionar con la pantalla encendida. Apagar y encender la pantalla (a veces varias veces) lo recupera.
+
+**A quién afecta:** unidades con pantalla de repuesto/reacondicionada cuyo chip touch es un **ILITEK ILI9883** (`/proc/ilitek/ver_info` → `CHIP ID = 9883`), pero que el kernel maneja con el driver de panel **BOE ICNL9922C** (`boe_prepare boe icnl9922c` en `dmesg`). No es un problema de este kernel custom: se reproduce igual con el kernel oficial de LineageOS 23.2. Con la ROM stock de Motorola no se recuerda haberlo visto.
+
+**Causa** (diagnosticada con `dmesg` y el contador de interrupciones del touch en `/proc/interrupts`):
+
+1. Al apagar la pantalla, `boe_unprepare` corta la energía del panel. Como es un TDDI (pantalla y touch en el mismo chip), el touch **pierde su firmware**, que vive en RAM (IRAM) y no en flash.
+2. Al encender, el driver `tp_ilitek` solo reactiva la interrupción (`Sleep Mode = 2`). No resetea el chip ni recarga el firmware: asume que el driver del panel se encargó, cosa que el driver BOE no hace.
+3. El touch solo revive **por accidente**: si llega una interrupción espuria justo después del resume, la lectura falla (`spi-wrapper read error`, PC del chip = `0x0`) y eso dispara `ili_spi_recovery` → reset → recarga de firmware → `FW upgrade pass` (~160 ms después del resume).
+4. Si esa interrupción llega antes de tiempo, el driver la ignora (`ignore interrupt !`), no hay recuperación y el touch queda muerto hasta el siguiente ciclo de pantalla.
+
+En una prueba de 10 ciclos de apagado/encendido deslizando el dedo sin parar, el touch quedó muerto en 4: 1 interrupción en 6 s, contra 50–85 en los ciclos buenos. `FW upgrade pass` apareció en **todos** los ciclos buenos y en **ninguno** de los malos.
+
+**Parche temporal:** [`tools/touchfix.sh`](tools/touchfix.sh) vigila `dmesg`. Si tras encender la pantalla no aparece `FW upgrade pass` en 0,8 s, vuelve a apagar y encender la pantalla (hasta 5 reintentos). Con el parche activo, 10 de 10 encendidas tuvieron touch. Requiere root y deja un log en `/data/local/tmp/touchfix/touchfix.log`.
+
+```bash
+adb root
+adb push tools/touchfix.sh /data/local/tmp/
+adb shell 'chmod 755 /data/local/tmp/touchfix.sh; setsid nohup /data/local/tmp/touchfix.sh >/dev/null 2>&1 </dev/null &'
+```
+
+Lanzado así corre hasta el próximo reinicio. Para que arranque solo, instalarlo como script de `service.d` de Magisk/KernelSU.
+
+**Qué no hacer** (lecciones del diagnóstico):
+
+- No leer `/proc/ilitek/fw_upgrade` ni `/proc/ilitek/fw_pc_counter`: el primero dispara una recarga de firmware y el segundo pone el chip en modo ICE. Ambos pueden dejar el touch muerto hasta reiniciar (no hay daño permanente).
+- `unbind`/`bind` del driver `ILITEK_TDDI` tampoco sirve: recarga el firmware, pero el driver no libera sus GPIO al desconectarse y no logra registrar la interrupción (`Request IRQ GPIO failed, ret = -16`).
+
+**Solución de fondo (pendiente):** en el kernel, hacer siempre reset + recarga de firmware en el resume de `tp_ilitek`, o que el panel de repuesto se maneje con el driver de panel correcto. Pendiente de reportar al mantenedor de LineageOS para `lamu`.
+
 ## Advertencia
 
 - Flashear un kernel custom puede romper la kABI de tu ROM si no es compatible. Usa este build con LineageOS 23.2 para `lamu`.
