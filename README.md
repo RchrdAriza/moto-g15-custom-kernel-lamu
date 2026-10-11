@@ -105,13 +105,27 @@ En una prueba de 10 ciclos de apagado/encendido deslizando el dedo sin parar, el
 
 **Parche temporal:** [`tools/touchfix.sh`](tools/touchfix.sh) vigila `dmesg`. Si tras encender la pantalla no aparece `FW upgrade pass` en 0,8 s, vuelve a apagar y encender la pantalla (hasta 5 reintentos). Con el parche activo, 10 de 10 encendidas tuvieron touch. Requiere root y deja un log en `/data/local/tmp/touchfix/touchfix.log`.
 
+Instalación para que arranque solo con KernelSU o Magisk (requiere dar root a "Shell" en el gestor):
+
 ```bash
-adb root
 adb push tools/touchfix.sh /data/local/tmp/
-adb shell 'chmod 755 /data/local/tmp/touchfix.sh; setsid nohup /data/local/tmp/touchfix.sh >/dev/null 2>&1 </dev/null &'
+adb shell
+su
 ```
 
-Lanzado así corre hasta el próximo reinicio. Para que arranque solo, instalarlo como script de `service.d` de Magisk/KernelSU.
+Y dentro de la sesión `su` del teléfono:
+
+```sh
+mkdir -p /data/adb/touchfix /data/adb/service.d
+cp /data/local/tmp/touchfix.sh /data/adb/touchfix/touchfix.sh
+rm /data/local/tmp/touchfix.sh
+printf '#!/system/bin/sh\nsetsid /data/adb/touchfix/touchfix.sh >/dev/null 2>&1 </dev/null &\n' > /data/adb/service.d/touchfix.sh
+chmod 755 /data/adb/touchfix /data/adb/service.d /data/adb/touchfix/touchfix.sh /data/adb/service.d/touchfix.sh
+restorecon -R /data/adb/touchfix /data/adb/service.d
+sh /data/adb/service.d/touchfix.sh   # lanzarlo ya, sin esperar al reinicio
+```
+
+> Ojo con `adb shell su -c '...; ...'` desde la PC: la shell local se come las comillas y solo el primer comando corre como root.
 
 **Qué no hacer** (lecciones del diagnóstico):
 

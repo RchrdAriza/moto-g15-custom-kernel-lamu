@@ -18,7 +18,7 @@ echo 0 > $DIR/reintentos
 log() { echo "$(date '+%F %T') $*" >> $LOG; }
 
 revisar() {
-  sleep $ESPERA
+  /system/bin/sleep $ESPERA
   [ -f $DIR/pendiente ] || return
   rm -f $DIR/pendiente
   n=$(cat $DIR/reintentos)
@@ -38,7 +38,9 @@ MARCA="touchfix: inicio $$"
 log "iniciado (pid $$)"
 echo "$MARCA" > /dev/kmsg
 listo=0
-dmesg -w | while read -r l; do
+# Rutas explícitas: bajo KernelSU/Magisk el script corre con BusyBox, cuyo
+# dmesg no soporta -w.
+/system/bin/dmesg -w | while read -r l; do
   # dmesg -w repite primero el buffer viejo: ignorarlo hasta ver nuestra marca
   if [ $listo = 0 ]; then
     case "$l" in *"$MARCA"*) listo=1 ;; esac
