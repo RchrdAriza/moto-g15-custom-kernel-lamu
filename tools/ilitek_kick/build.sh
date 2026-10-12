@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Compila ilitek_kick.ko para el kernel que corre en el teléfono conectado por adb
-# (requiere root vía KernelSU/Magisk con permiso para "Shell").
+# (requiere root: KernelSU/Magisk con permiso para "Shell", o "Depuración con root").
 #
 # Toma del teléfono la versión exacta del kernel, su config (/proc/config.gz) y el
 # CRC de module_layout (de tp_ilitek.ko), y baja solo la parte del árbol del
@@ -14,8 +14,14 @@ WORK=${1:-$HOME/.cache/lamu-kmod}
 SRC=$WORK/src
 mkdir -p "$WORK"
 
-phone() { adb shell su <<<"$1" | tr -d '\r'; }
-phone_raw() { adb exec-out su -c "$1"; }   # binarios: sin tocar los bytes
+# Root vía su (KernelSU/Magisk) o, si adbd ya corre como root ("Depuración con root"), directo.
+if [ "$(adb shell id -u | tr -d '\r')" = 0 ]; then
+  phone() { adb shell "$1" | tr -d '\r'; }
+  phone_raw() { adb exec-out "$1"; }
+else
+  phone() { adb shell su <<<"$1" | tr -d '\r'; }
+  phone_raw() { adb exec-out su -c "$1"; }   # binarios: sin tocar los bytes
+fi
 
 RELEASE=$(phone 'uname -r')
 # El hash del commit va en la versión: 6.6.127-android15-8-g<hash>-...
