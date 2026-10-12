@@ -103,12 +103,33 @@ El paso a paso completo está documentado en [`kernel_droidspaces_lamu_clear.ipy
 
 En una prueba de 10 ciclos de apagado/encendido deslizando el dedo sin parar, el touch quedó muerto en 4: 1 interrupción en 6 s, contra 50–85 en los ciclos buenos. `FW upgrade pass` apareció en **todos** los ciclos buenos y en **ninguno** de los malos.
 
-**Parche temporal:** [`tools/touchfix.sh`](tools/touchfix.sh) vigila `dmesg`. Si tras encender la pantalla no aparece `FW upgrade pass` en 0,8 s, vuelve a apagar y encender la pantalla (hasta 5 reintentos). Con el parche activo, 10 de 10 encendidas tuvieron touch. Requiere root y deja un log en `/data/local/tmp/touchfix/touchfix.log`.
+**Parche temporal:** [`tools/touchfix.sh`](tools/touchfix.sh) vigila `dmesg`. Si tras encender la pantalla no aparece `FW upgrade pass` en 0,5 s, fuerza la recuperación:
 
-Instalación para que arranque solo con KernelSU o Magisk (requiere dar root a "Shell" en el gestor):
+1. **Sin parpadeo**, con el módulo [`tools/ilitek_kick`](tools/ilitek_kick): simula la interrupción del touch con `generic_handle_irq_safe()`, y el driver ejecuta su propia recuperación (reset + recarga de firmware) igual que en un ciclo bueno. Tarda ~135 ms.
+2. **Respaldo**, si no hay módulo o 2 interrupciones simuladas no bastaron: apaga y enciende la pantalla (hasta 8 reintentos en total).
+
+Resultados en 10 ciclos de apagado/encendido: sin parche, 4 ciclos con el touch muerto; solo con apagar/encender, 10 de 10 con touch pero con parpadeos (a veces 4 seguidos); con el módulo, 10 de 10 con touch y sin parpadeos (los 4 ciclos malos se resolvieron con una sola interrupción simulada). Requiere root y deja un log en `/data/local/tmp/touchfix/touchfix.log`.
+
+### Compilar el módulo
+
+El módulo no importa ningún símbolo del kernel: así no depende de los CRC de `MODVERSIONS`. `touchfix.sh` le pasa la dirección de `generic_handle_irq_safe` al cargarlo, leída de `/proc/kallsyms`. Aun así, debe compilarse para el kernel exacto del teléfono. [`build.sh`](tools/ilitek_kick/build.sh) lo hace automáticamente con el teléfono conectado por `adb` y root para "Shell":
+
+- Lee la versión del kernel (`uname -r`) y baja de AOSP solo la parte del árbol de ese commit necesaria para módulos externos, a `~/.cache/lamu-kmod`.
+- Usa la config real del teléfono (`/proc/config.gz`) y el CRC de `module_layout` de `tp_ilitek.ko`.
+- Compila y verifica que `struct module` coincida con la de los módulos del teléfono.
 
 ```bash
-adb push tools/touchfix.sh /data/local/tmp/
+tools/ilitek_kick/build.sh   # requiere clang, ld.lld y llvm-objcopy en la PC
+```
+
+Hay que recompilarlo si cambia el kernel (actualización de LineageOS o kernel custom). Si no coincide, el kernel simplemente lo rechaza y `touchfix.sh` sigue funcionando con apagar/encender.
+
+### Instalar
+
+Para que arranque solo con KernelSU o Magisk (requiere dar root a "Shell" en el gestor):
+
+```bash
+adb push tools/touchfix.sh tools/ilitek_kick/ilitek_kick.ko /data/local/tmp/
 adb shell
 su
 ```
@@ -116,11 +137,13 @@ su
 Y dentro de la sesión `su` del teléfono:
 
 ```sh
+pkill -f /data/adb/touchfix/touchfix.sh   # si ya había una versión corriendo
 mkdir -p /data/adb/touchfix /data/adb/service.d
-cp /data/local/tmp/touchfix.sh /data/adb/touchfix/touchfix.sh
-rm /data/local/tmp/touchfix.sh
+cp /data/local/tmp/touchfix.sh /data/local/tmp/ilitek_kick.ko /data/adb/touchfix/
+rm /data/local/tmp/touchfix.sh /data/local/tmp/ilitek_kick.ko
 printf '#!/system/bin/sh\nsetsid /data/adb/touchfix/touchfix.sh >/dev/null 2>&1 </dev/null &\n' > /data/adb/service.d/touchfix.sh
 chmod 755 /data/adb/touchfix /data/adb/service.d /data/adb/touchfix/touchfix.sh /data/adb/service.d/touchfix.sh
+chmod 644 /data/adb/touchfix/ilitek_kick.ko
 restorecon -R /data/adb/touchfix /data/adb/service.d
 sh /data/adb/service.d/touchfix.sh   # lanzarlo ya, sin esperar al reinicio
 ```

@@ -1,0 +1,8 @@
+# Salidas de Kbuild
+*.o
+*.ko
+*.mod
+*.mod.c
+.*.cmd
+Module.symvers
+modules.order
