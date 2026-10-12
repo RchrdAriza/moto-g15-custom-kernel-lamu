@@ -122,7 +122,7 @@ El módulo no importa ningún símbolo del kernel: así no depende de los CRC de
 tools/ilitek_kick/build.sh   # requiere clang, ld.lld y llvm-objcopy en la PC
 ```
 
-Hay que recompilarlo si cambia el kernel (actualización de LineageOS o kernel custom). Si no coincide, el kernel simplemente lo rechaza y `touchfix.sh` sigue funcionando con apagar/encender.
+El kernel acepta el módulo mientras coincida el CRC de `module_layout`, que en GKI se mantiene estable entre actualizaciones: el módulo compilado para lineage-23.2 (`6.6.127`) cargó y funcionó en lineage-24.0 (`6.6.139`). Igual conviene recompilarlo tras actualizar. Si no coincide, el kernel simplemente lo rechaza y `touchfix.sh` sigue funcionando con apagar/encender.
 
 ### Instalar
 
