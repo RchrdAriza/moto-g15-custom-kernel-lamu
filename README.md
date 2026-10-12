@@ -155,7 +155,7 @@ sh /data/adb/service.d/touchfix.sh   # lanzarlo ya, sin esperar al reinicio
 - No leer `/proc/ilitek/fw_upgrade` ni `/proc/ilitek/fw_pc_counter`: el primero dispara una recarga de firmware y el segundo pone el chip en modo ICE. Ambos pueden dejar el touch muerto hasta reiniciar (no hay daño permanente).
 - `unbind`/`bind` del driver `ILITEK_TDDI` tampoco sirve: recarga el firmware, pero el driver no libera sus GPIO al desconectarse y no logra registrar la interrupción (`Request IRQ GPIO failed, ret = -16`).
 
-**Solución de fondo (pendiente):** en el kernel, hacer siempre reset + recarga de firmware en el resume de `tp_ilitek`, o que el panel de repuesto se maneje con el driver de panel correcto. Reportado al mantenedor de LineageOS: [LineageOS/issues/android#10345](https://gitlab.com/LineageOS/issues/android/-/work_items/10345).
+**Solución de fondo (pendiente):** en el kernel, hacer siempre reset + recarga de firmware en el resume de `tp_ilitek`, o que el panel de repuesto se maneje con el driver de panel correcto. Reportado al mantenedor de LineageOS: [LineageOS/issues#762](https://github.com/LineageOS/issues/issues/762).
 
 ## Advertencia
 
